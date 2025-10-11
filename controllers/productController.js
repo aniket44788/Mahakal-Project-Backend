@@ -6,7 +6,7 @@ export const createProduct = async (req, res) => {
   try {
     let images = [];
     if (req.files && req.files.length > 0) {
-      images = req.files.map(file => ({
+      images = req.files.map((file) => ({
         url: file.path,
         public_id: file.filename,
       }));
@@ -42,7 +42,10 @@ export const getProducts = async (req, res) => {
 export const getProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate("category");
-    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     res.status(200).json({ success: true, product });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -54,7 +57,7 @@ export const updateProduct = async (req, res) => {
   try {
     let images = [];
     if (req.files && req.files.length > 0) {
-      images = req.files.map(file => ({
+      images = req.files.map((file) => ({
         url: file.path,
         public_id: file.filename,
       }));
@@ -66,9 +69,16 @@ export const updateProduct = async (req, res) => {
       { new: true }
     );
 
-    if (!updatedProduct) return res.status(404).json({ success: false, message: "Product not found" });
+    if (!updatedProduct)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
 
-    res.status(200).json({ success: true, message: "Product updated", product: updatedProduct });
+    res.status(200).json({
+      success: true,
+      message: "Product updated",
+      product: updatedProduct,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -78,19 +88,34 @@ export const updateProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
 
-    // Delete images from cloudinary
-    for (let img of product.images) {
-      if (img.public_id) {
-        await cloudinary.uploader.destroy(img.public_id);
-      }
+    // Delete all media from Cloudinary in parallel
+    if (product.images && product.images.length > 0) {
+      await Promise.all(
+        product.images.map((media) => {
+          if (media.public_id) {
+            // Determine type for Cloudinary delete
+            const destroyType = media.type === "video" ? "video" : "image";
+            return cloudinary.uploader.destroy(media.public_id, {
+              resource_type: destroyType,
+            });
+          }
+        })
+      );
     }
 
+    // Delete product from DB
     await product.deleteOne();
 
-    res.status(200).json({ success: true, message: "Product deleted" });
+    res
+      .status(200)
+      .json({ success: true, message: "Product deleted successfully" });
   } catch (error) {
+    console.error("Error deleting product:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

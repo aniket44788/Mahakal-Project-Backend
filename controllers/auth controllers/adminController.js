@@ -16,8 +16,8 @@ export const adminRegisterEmail = async (req, res) => {
     const admin = new Admin({ name, email, password });
     await admin.save();
 
-    // Generate JWT
-    const token = generateToken(admin);
+    // Generate JWT with name MahakalToken
+    const MahakalToken = generateToken(admin);
 
     // Exclude password from response
     const { password: _, ...adminWithoutPassword } = admin.toObject();
@@ -26,7 +26,7 @@ export const adminRegisterEmail = async (req, res) => {
       success: true,
       message: "Admin registered successfully",
       admin: adminWithoutPassword,
-      token,
+      MahakalToken, // ✅ token named MahakalToken
     });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
@@ -38,27 +38,24 @@ export const adminLogin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Select password explicitly for comparison
     const admin = await Admin.findOne({ email }).select("+password");
     if (!admin) return res.status(401).json({ message: "Admin not found" });
     if (admin.isBlocked)
       return res.status(403).json({ message: "Admin is blocked" });
 
-    // Compare password
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) return res.status(401).json({ message: "Invalid password" });
 
-    // Generate JWT
-    const token = generateToken(admin);
+    // Generate JWT with name MahakalToken
+    const MahakalToken = generateToken(admin);
 
-    // Exclude password before sending response
     const { password: _, ...adminWithoutPassword } = admin.toObject();
 
     res.json({
       success: true,
       message: "Login successful",
       admin: adminWithoutPassword,
-      token,
+      MahakalToken, // ✅ token named MahakalToken
     });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
