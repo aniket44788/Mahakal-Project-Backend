@@ -87,7 +87,9 @@ export const googleCallback = async (req, res) => {
     }
 
     const token = generateToken(user);
-    return res.redirect(`${process.env.ORIGIN_URL}/dashboard?token=${token}`);
+    return res.redirect(
+      `https://mahakal-project-frontend.vercel.app/dashboard?token=${token}`
+    );
   } catch (err) {
     console.error("Google callback error:", err);
     return res.status(500).json({ success: false, message: err.message });
