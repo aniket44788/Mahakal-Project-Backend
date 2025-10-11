@@ -1,4 +1,5 @@
 // server.js
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -8,7 +9,6 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 import database from "./config/database.js";
 import userRouter from "./routes/auth/authRoutes.js";
-import googleTokenRouter from "./middleware/googleToken.js";
 
 dotenv.config();
 database();
@@ -16,12 +16,11 @@ database();
 const app = express();
 const PORT = process.env.PORT || 8999;
 
+// CORS for frontend
 app.use(
   cors({
-    origin: "https://mahakal-project-frontend.vercel.app",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -32,39 +31,31 @@ app.use(
     secret: process.env.SESSION_SECRET || "secret",
     resave: false,
     saveUninitialized: true,
-    cookie: {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-    },
+    cookie: { httpOnly: true, secure: false, sameSite: "lax" },
   })
 );
 
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Configure GoogleStrategy for redirect-based flow
+// Passport (only if using redirect flow elsewhere)
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${process.env.BACKENDURL}/user/google/callback`,
+      callbackURL: `https://mahakal-project-backend.onrender.com/user/google/callback`,
     },
     (accessToken, refreshToken, profile, done) => done(null, profile)
   )
 );
-
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
-// Mount routes
-app.use("/user", userRouter);
-app.use("/auth/google", googleTokenRouter);
+app.use(passport.initialize());
+app.use(passport.session());
 
-app.get("/", (req, res) => {
-  res.send("Mahakal Backend Server is Now Live…");
-});
+// Mount auth routes
+app.use("/user", userRouter);
+
+app.get("/", (req, res) => res.send("Mahakal Backend Server is Live."));
 
 app.listen(PORT, () => {
   console.log(`🗿 Mahakal Server is host at port no ${PORT}....`);

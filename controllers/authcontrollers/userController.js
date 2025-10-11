@@ -1,9 +1,11 @@
-// controllers/auth/userController.js
+import { OAuth2Client } from "google-auth-library";
 import User from "../../models/userSchema.js";
 import { generateOTP } from "../../utils/sendOTP.js";
 import generateToken from "../../utils/generateToken.js";
 
-// 1️⃣ Phone OTP
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// 1️⃣ Phone OTP registration/login
 export const registerOrSendOTP = async (req, res) => {
   const { phone, name } = req.body;
   try {
@@ -57,41 +59,55 @@ export const verifyOTP = async (req, res) => {
   }
 };
 
-// 3️⃣ Redirect-based Google callback
-export const googleCallback = async (req, res) => {
+// 3️⃣ Token-exchange Google login
+export const googleTokenLogin = async (req, res) => {
   try {
-    const profile = req.user;
-    if (!profile?.emails?.[0]?.value) {
+    const { idToken } = req.body;
+    if (!idToken) {
       return res
         .status(400)
-        .json({ success: false, message: "Invalid Google profile" });
+        .json({ success: false, message: "Missing idToken" });
     }
 
-    let user = await User.findOne({
-      $or: [{ email: profile.emails[0].value }, { googleId: profile.id }],
+    // Verify with Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
 
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Google account" });
+    }
+
+    // Find or create user
+    let user = await User.findOne({ $or: [{ email }, { googleId }] });
     if (!user) {
       user = await User.create({
-        name: profile.displayName,
-        email: profile.emails[0].value,
-        googleId: profile.id,
+        name,
+        email,
+        googleId,
+        profileImage: picture,
         isVerified: true,
         authMethod: "google",
       });
     } else if (!user.googleId) {
-      user.googleId = profile.id;
+      user.googleId = googleId;
+      user.profileImage = picture;
       user.isVerified = true;
       user.authMethod = "google";
       await user.save();
     }
 
     const token = generateToken(user);
-    return res.redirect(
-      `https://mahakal-project-frontend.vercel.app/dashboard?token=${token}`
-    );
+    return res.json({ success: true, token, user });
   } catch (err) {
-    console.error("Google callback error:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("Google token verification error:", err);
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid Google token" });
   }
 };
