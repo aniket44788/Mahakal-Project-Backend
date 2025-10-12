@@ -9,6 +9,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 import database from "./config/database.js";
 import userRouter from "./routes/auth/authRoutes.js";
+import productRouter from "./routes/productRoute.js";
 
 dotenv.config();
 database();
@@ -54,6 +55,7 @@ app.use(passport.session());
 
 // Mount auth routes
 app.use("/user", userRouter);
+app.use("/products" , productRouter)
 
 app.get("/", (req, res) => res.send("Mahakal Backend Server is Live."));
 
