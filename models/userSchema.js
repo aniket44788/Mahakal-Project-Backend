@@ -4,45 +4,37 @@ import bcrypt from "bcrypt";
 const userSchema = new mongoose.Schema({
   name: { type: String, trim: true },
 
-  // ✅ Make phone optional for Google OAuth users
-  phone: {
-    type: String,
-    unique: true,
-    sparse: true, // allows multiple null values
-    required: function () {
-      // Phone is required only if not using Google OAuth
-      return !this.googleId;
-    },
-  },
-
-  // ✅ Email for Google OAuth users
+  // ✅ Email for Google or Email login
   email: {
     type: String,
     unique: true,
-    sparse: true,
-    required: function () {
-      // Email is required only for Google OAuth users
-      return !!this.googleId;
-    },
+    sparse: true, // allows users without email if ever needed
+    required: true,
+    lowercase: true,
+    trim: true,
   },
 
-  // ✅ Add googleId for OAuth identification
-  googleId: { type: String, unique: true, sparse: true },
+  // ✅ Google OAuth ID
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true, // allows normal email users too
+  },
 
-  // ✅ Add password field (optional)
+  // ✅ Password (for normal email-based login)
   password: { type: String },
 
+  // ✅ Account verification flag
   isVerified: { type: Boolean, default: false },
-  otp: { type: String }, // temporary OTP storage for phone auth
-  otpExpires: { type: Date },
 
-  // ✅ Add authentication method tracking
+  // ✅ Auth method tracking
   authMethod: {
     type: String,
-    enum: ["phone", "google", "email"],
-    default: "phone",
+    enum: ["google", "email"],
+    default: "google",
   },
 
+  // ✅ Optional address info
   address: [
     {
       street: String,
@@ -52,38 +44,39 @@ const userSchema = new mongoose.Schema({
       country: String,
     },
   ],
+
+  // ✅ Relations
   favoriteProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
   orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
   cart: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+
   createdAt: { type: Date, default: Date.now },
 });
 
-// ✅ Create compound index for better query performance
-userSchema.index({ phone: 1, email: 1, googleId: 1 });
+// ✅ Create useful indexes
+userSchema.index({ email: 1, googleId: 1 });
 
-// Password hashing middleware
+// ✅ Hash password if changed
 userSchema.pre("save", async function (next) {
-  // Only hash if password field exists and is modified
   if (!this.isModified("password") || !this.password) return next();
-
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Password comparison method
+// ✅ Compare passwords
 userSchema.methods.comparePassword = async function (candidatePassword) {
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// ✅ Helper method to check authentication method
+// ✅ Auth helpers
 userSchema.methods.isGoogleUser = function () {
   return !!this.googleId;
 };
 
-userSchema.methods.isPhoneUser = function () {
-  return !!this.phone && !this.googleId;
+userSchema.methods.isEmailUser = function () {
+  return !this.googleId && !!this.email;
 };
 
 export default mongoose.model("User", userSchema);

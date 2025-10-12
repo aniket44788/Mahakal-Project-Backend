@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 8999;
 // CORS for frontend
 app.use(
   cors({
-    origin: "https://mahakal-project-frontend.vercel.app",
+    origin: process.env.ORIGIN_URL,
     credentials: true,
   })
 );
@@ -41,7 +41,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `https://mahakal-project-backend.onrender.com/user/google/callback`,
+      callbackURL: process.env.BACKENDURL,
     },
     (accessToken, refreshToken, profile, done) => done(null, profile)
   )
