@@ -45,11 +45,22 @@ const userSchema = new mongoose.Schema({
     },
   ],
 
-  // ✅ Relations
-  favoriteProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+  // ✅ Relations,
+  favoriteProducts: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    },
+  ],
   orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
-  cart: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+  cart: [
+    {
+      product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+      quantity: { type: Number, default: 1 },
+    },
+  ],
 
+  
   createdAt: { type: Date, default: Date.now },
 });
 

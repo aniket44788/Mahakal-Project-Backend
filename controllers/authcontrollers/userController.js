@@ -2,6 +2,8 @@ import { OAuth2Client } from "google-auth-library";
 import User from "../../models/userSchema.js";
 import { generateOTP } from "../../utils/sendOTP.js";
 import generateToken from "../../utils/generateToken.js";
+import orderSchema from "../../models/orderSchema.js";
+import productSchema from "../../models/productSchema.js";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -55,5 +57,44 @@ export const googleTokenLogin = async (req, res) => {
     return res
       .status(400)
       .json({ success: false, message: "Invalid Google token" });
+  }
+};
+
+export const userProfile = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.params.id || req.query.id;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User ID is required" });
+    }
+
+    // 🔍 Find the user, but exclude sensitive fields like password
+    const user = await User.findById(userId)
+      .select("-password")
+      .populate("favoriteProducts")
+      .populate("orders")
+      .populate("cart");
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // ✅ Send user profile
+    res.status(200).json({
+      success: true,
+      message: "User profile fetched successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching user profile",
+      error: error.message,
+    });
   }
 };

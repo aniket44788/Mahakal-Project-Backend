@@ -1,16 +1,17 @@
+import jwt from "jsonwebtoken";
+import User from "../models/userSchema.js";
+import "../models/orderSchema.js";
+import "../models/productSchema.js";
 export const protect = async (req, res, next) => {
   try {
     let token;
 
-    // 1. Authorization header
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer ")
     ) {
       token = req.headers.authorization.split(" ")[1];
-    }
-    // 2. HTTPS-only cookie (optional)
-    else if (req.cookies && req.cookies.token) {
+    } else if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
     }
 
@@ -19,14 +20,16 @@ export const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     req.user = await User.findById(decoded.id)
       .populate("cart")
       .populate("orders")
       .populate("favoriteProducts")
-      .select("-password -otp -otpExpires");
+      .select("-password");
 
-    return next();
+    next();
   } catch (err) {
+    console.error(err);
     return res.status(401).json({ message: "Not authorized, invalid token" });
   }
 };

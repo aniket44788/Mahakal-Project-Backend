@@ -10,6 +10,10 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import database from "./config/database.js";
 import userRouter from "./routes/auth/authRoutes.js";
 import productRouter from "./routes/productRoute.js";
+import adminRouter from "./routes/auth/adminRouter.js";
+import paymentRouter from "./routes/paymentRoutes.js";
+import orderRouter from "./routes/orderRoute.js";
+import cartRouter from "./routes/cartRoute.js";
 
 dotenv.config();
 database();
@@ -22,6 +26,8 @@ app.use(
   cors({
     origin: process.env.ORIGIN_URL,
     credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -55,7 +61,11 @@ app.use(passport.session());
 
 // Mount auth routes
 app.use("/user", userRouter);
-app.use("/products" , productRouter)
+app.use("/admin", adminRouter);
+app.use("/products", productRouter);
+app.use("/api/payment", paymentRouter);
+app.use("/oders", orderRouter);
+app.use("/cart", cartRouter);
 
 app.get("/", (req, res) => res.send("Mahakal Backend Server is Live."));
 

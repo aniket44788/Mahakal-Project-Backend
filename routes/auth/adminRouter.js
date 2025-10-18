@@ -3,7 +3,7 @@ import {
   adminLogin,
   adminProfile,
   adminRegisterEmail,
-} from "../../controllers/auth controllers/adminController.js";
+} from "../../controllers/authcontrollers/adminController.js";
 import { adminProtect } from "../../middleware/adminauth.js";
 
 const adminRouter = express.Router();
