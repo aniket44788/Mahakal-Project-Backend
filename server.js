@@ -14,6 +14,7 @@ import adminRouter from "./routes/auth/adminRouter.js";
 import paymentRouter from "./routes/paymentRoutes.js";
 import orderRouter from "./routes/orderRoute.js";
 import cartRouter from "./routes/cartRoute.js";
+import DashboardProductRouter from "./routes/Dasboard Products Route/Dashboardproductroutes.js";
 
 dotenv.config();
 database();
@@ -66,6 +67,7 @@ app.use("/products", productRouter);
 app.use("/api/payment", paymentRouter);
 app.use("/oders", orderRouter);
 app.use("/cart", cartRouter);
+app.use("/dashboard/product", DashboardProductRouter);
 
 app.get("/", (req, res) => res.send("Mahakal Backend Server is Live."));
 

@@ -62,32 +62,59 @@ export const googleTokenLogin = async (req, res) => {
 
 export const userProfile = async (req, res) => {
   try {
+    // ✅ Get user ID from authenticated request or params
     const userId = req.user?._id || req.params.id || req.query.id;
 
     if (!userId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User ID is required" });
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
     }
 
-    // 🔍 Find the user, but exclude sensitive fields like password
+    // ✅ Fetch user (exclude sensitive fields)
     const user = await User.findById(userId)
-      .select("-password")
-      .populate("favoriteProducts")
-      .populate("orders")
-      .populate("cart");
+      .select("-password -__v")
+      .populate({
+        path: "favoriteProducts",
+        select: "title price image category", // only important fields
+      })
+      .populate({
+        path: "orders",
+        select: "totalAmount status createdAt",
+      })
+      .populate({
+        path: "cart.product",
+        select: "title price image",
+      });
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    // ✅ Send user profile
+    // ✅ Clean response: add profile image safely
+    const userData = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      profileImage: user.profileImage || null, // show Google image
+      authMethod: user.authMethod,
+      isVerified: user.isVerified,
+      favoriteProducts: user.favoriteProducts,
+      orders: user.orders,
+      cart: user.cart,
+      address: user.address,
+      createdAt: user.createdAt,
+    };
+
+    // ✅ Send clean response
     res.status(200).json({
       success: true,
       message: "User profile fetched successfully",
-      user,
+      user: userData,
     });
   } catch (error) {
     console.error("Error fetching user profile:", error);

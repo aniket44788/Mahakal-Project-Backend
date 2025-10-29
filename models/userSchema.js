@@ -34,6 +34,9 @@ const userSchema = new mongoose.Schema({
     default: "google",
   },
 
+  // ✅ Add this field for Google / Profile Image
+  profileImage: { type: String, default: "" },
+
   // ✅ Optional address info
   address: [
     {
@@ -60,7 +63,6 @@ const userSchema = new mongoose.Schema({
     },
   ],
 
-  
   createdAt: { type: Date, default: Date.now },
 });
 
