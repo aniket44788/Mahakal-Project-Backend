@@ -3,7 +3,6 @@ import crypto from "crypto";
 import Order from "../models/orderSchema.js";
 import User from "../models/userSchema.js";
 import { sendEmail } from "../utils/sendEmail.js";
-
 export const createOrder = async (req, res) => {
   console.log("Create order hitting");
   const { amount, currency, products, addressId } = req.body;
@@ -53,28 +52,28 @@ export const createOrder = async (req, res) => {
       receipt: "receipt_" + Date.now(),
       payment_capture: 1,
     };
-
     console.log(options, "options");
-
     const razorpayOrder = await razorpay.orders.create(options);
 
-    // // 2️⃣ Save order in MongoDB
-    // const newOrder = await Order.create({
-    //   user: req.user.id,
-    //   products: products, // frontend must send this
-    //   amount: amount,
-    //   currency: currency || "INR",
-    //   razorpayOrderId: razorpayOrder.id,
-    //   paymentStatus: "pending",
-    //   deliveryStatus: "pending",
-    //   address: selectedAddress, // ⭐ ADD THIS
-    // });
+    // 2️⃣ Save order in MongoDB
+    const newOrder = await Order.create({
+      user: req.user.id,
+      products: products, // frontend must send this
+      amount: amount,
+      currency: currency || "INR",
+      razorpayOrderId: razorpayOrder.id,
+      paymentStatus: "pending",
+      deliveryStatus: "pending",
+      address: selectedAddress, // ⭐ ADD THIS
+    });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Razorpay order created",
-      razorpayOrder,
-      address: selectedAddress,
+      message: "Order created successfully",
+      razorpayOrder: razorpayOrder, // Full Razorpay order object
+      orderInDB: newOrder, // Full MongoDB order object
+      orderIdInDB: newOrder._id, // Only ID (optional)
+      address: selectedAddress, // ⭐ ADD THIS
     });
   } catch (error) {
     console.error("Order create error:", error);
@@ -84,24 +83,30 @@ export const createOrder = async (req, res) => {
 
 // ✅ Verify Payment Controller
 export const verifyPayment = async (req, res) => {
-  const {
-    razorpayOrderId,
-    razorpayPaymentId,
-    signature,
-    products,
-    amount,
-    address,
-  } = req.body;
+  const { razorpayOrderId, razorpayPaymentId, signature } = req.body;
 
   try {
+    // Check if secret key is available
     if (!process.env.RAZORPAY_KEY) {
+      console.error(
+        "RAZORPAY_KEY_SECRET is not defined in environment variables"
+      );
       return res.status(500).json({
         success: false,
-        message: "Server configuration error",
+        message: "Server configuration error. Please contact support.",
       });
     }
 
-    // Validate Razorpay Signature
+    // 1️⃣ Fetch the order from DB
+    const order = await Order.findOne({ razorpayOrderId });
+
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+    }
+
+    // 2️⃣ Generate HMAC to verify signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY)
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
@@ -110,100 +115,105 @@ export const verifyPayment = async (req, res) => {
     if (generatedSignature !== signature) {
       return res.status(400).json({
         success: false,
-        message: "Invalid signature",
+        message: "Invalid signature. Payment verification failed.",
       });
     }
 
-    // Now create order in DB only after payment success
-    const newOrder = await Order.create({
-      user: req.user.id,
-      products,
-      amount,
-      currency: "INR",
-      razorpayOrderId,
-      razorpayPaymentId,
-      razorpaySignature: signature,
-      paymentStatus: "paid",
-      deliveryStatus: "pending",
-      address,
-    });
+    // 3️⃣ Update order as paid
+    order.paymentStatus = "paid";
+    order.razorpayPaymentId = razorpayPaymentId;
+    order.razorpaySignature = signature;
+    await order.save();
 
-    // Update user
+    console.log("Order saved successfully:", order._id);
+
+    // 4️⃣ Add order to user
     const user = await User.findById(req.user.id);
-    user.orders.push(newOrder._id);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    user.orders.push(order._id);
     user.cart = [];
     await user.save();
 
-    // Send Email
+    // 📩 SEND ORDER CONFIRMATION EMAIL HERE
     await sendEmail(
       user.email,
       "🙏 Order Confirmation – Mahakal Bhakti Bazzar",
       `
-      <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333;">
-        <h2 style="color:#d35400; text-align:center;">🙏 Har Har Mahadev 🙏</h2>
-        <h3 style="text-align:center;">Your Sacred Prasad Order Is Confirmed</h3>
+  <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333;">
+    <h2 style="color:#d35400; text-align:center;">🙏 Har Har Mahadev 🙏</h2>
+    <h3 style="text-align:center;">Your Sacred Prasad Order Is Confirmed</h3>
 
-        <p>Dear <strong>${address.fullName}</strong>,</p>
-        <p>Thank you for placing your sacred Prasad order with <strong>Mahakal Bhakti Bazzar</strong>.</p>
+    <p>Dear <strong>${order.address.fullName}</strong>,</p>
+    <p>Thank you for placing your divine Prasad order with <strong>Mahakal Bhakti Bazzar</strong>.</p>
 
-        <h3>📦 Order Details</h3>
-        <ul>
-          <li><strong>Order ID:</strong> ${newOrder._id}</li>
-          <li><strong>Payment ID:</strong> ${razorpayPaymentId}</li>
-          <li><strong>Total Amount:</strong> ₹${amount}</li>
-        </ul>
+    <h3>📦 Order Details</h3>
+    <ul>
+      <li><strong>Order ID:</strong> ${order._id}</li>
+      <li><strong>Payment ID:</strong> ${razorpayPaymentId}</li>
+      <li><strong>Total Amount:</strong> ₹${order.amount}</li>
+    </ul>
 
-        <h3>📍 Delivery Address</h3>
-        <ul>
-          <li><strong>Name:</strong> ${address.fullName}</li>
-          <li><strong>Phone:</strong> ${address.phone}</li>
-          <li><strong>Address:</strong> ${address.houseNo}, ${address.area}, ${
-        address.landmark || ""
-      }</li>
-          <li><strong>City:</strong> ${address.city}</li>
-          <li><strong>State:</strong> ${address.state}</li>
-          <li><strong>Pincode:</strong> ${address.pincode}</li>
-        </ul>
+    <h3>📍 Delivery Address</h3>
+    <ul>
+      <li><strong>Name:</strong> ${order.address.fullName}</li>
+      <li><strong>Phone:</strong> ${order.address.phone}</li>
+      <li><strong>Address:</strong> ${order.address.houseNo}, ${
+        order.address.area
+      }, ${order.address.landmark || ""}</li>
+      <li><strong>City:</strong> ${order.address.city}</li>
+      <li><strong>State:</strong> ${order.address.state}</li>
+      <li><strong>Pincode:</strong> ${order.address.pincode}</li>
+    </ul>
 
-        <h3>🛍 Products Ordered</h3>
-        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-          <thead>
-            <tr style="background:#f4f4f4;">
-              <th style="padding:8px 10px;">Product</th>
-              <th style="padding:8px 10px;">Qty</th>
-              <th style="padding:8px 10px;">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${products
-              .map(
-                (item) => `
-              <tr>
-                <td style="padding:8px 10px;">${item.name}</td>
-                <td style="padding:8px 10px;">${item.quantity}</td>
-                <td style="padding:8px 10px;">₹${item.price}</td>
-              </tr>`
-              )
-              .join("")}
-          </tbody>
-        </table>
+    <h3>🛍 Products Ordered</h3>
 
-        <p style="margin-top:20px;">We will update you once your sacred Prasad is shipped.</p>
-        <p style="margin-top:18px;">With Divine Regards,<br/><strong>Mahakal Bhakti Bazzar Team</strong></p>
-      </div>
-      `
+    <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+      <thead>
+        <tr style="background:#f4f4f4;">
+          <th style="padding:8px 10px; text-align:left;">Product</th>
+          <th style="padding:8px 10px; text-align:left;">Qty</th>
+          <th style="padding:8px 10px; text-align:left;">Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${order.products
+          .map(
+            (item) => `
+          <tr>
+            <td style="padding:8px 10px;">${item.name}</td>
+            <td style="padding:8px 10px;">${item.quantity}</td>
+            <td style="padding:8px 10px;">₹${item.price}</td>
+          </tr>
+        `
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <p style="margin-top:20px;">We will notify you once your Prasad is shipped. May Lord Mahakal always bless you.</p>
+
+    <p style="margin-top:18px;">With Divine Regards,<br/><strong>Mahakal Bhakti Bazzar Team</strong></p>
+
+    <hr style="margin:25px 0; border:0; border-top:1px solid #ccc;">
+    <p style="font-size:13px; text-align:center; color:#777;">
+      Need help? Reply to this email or reach our support anytime.
+    </p>
+  </div>
+`
     );
 
     return res.json({
       success: true,
-      message: "Payment verified, order saved & email sent",
-      order: newOrder,
+      message: "Order Placed & Email Sent",
+      order,
     });
   } catch (err) {
     console.error("Payment verification error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal Server Error" });
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
