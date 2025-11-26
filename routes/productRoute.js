@@ -15,14 +15,14 @@ const productRouter = express.Router();
 productRouter.post(
   "/createproduct",
   adminProtect,
-  upload.array("images", 5), // 👈 multer middleware
+  upload.array("images", 5),
   createProduct
 );
 
 productRouter.patch(
   "/update/:id",
   adminProtect,
-  upload.array("images", 5), // 👈 update में भी image upload allow
+  upload.array("images", 5),
   updateProduct
 );
 

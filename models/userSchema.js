@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import addressSchema from "./addressSchema.js";
 
 const userSchema = new mongoose.Schema({
   name: { type: String, trim: true },
@@ -37,17 +38,7 @@ const userSchema = new mongoose.Schema({
   // ✅ Add this field for Google / Profile Image
   profileImage: { type: String, default: "" },
 
-  // ✅ Optional address info
-  address: [
-    {
-      street: String,
-      city: String,
-      state: String,
-      pincode: String,
-      country: String,
-    },
-  ],
-
+  addresses: [addressSchema],
   // ✅ Relations,
   favoriteProducts: [
     {
