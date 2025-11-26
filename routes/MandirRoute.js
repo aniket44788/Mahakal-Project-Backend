@@ -19,7 +19,7 @@ MandirRoute.post(
 );
 
 // Get All Temples
-MandirRoute.get("/getall", protect, getTemples);
+MandirRoute.get("/getall",  getTemples);
 
 // Get Temple By ID
 MandirRoute.get("/getby/:id", getTempleById);
