@@ -73,10 +73,10 @@ const orderSchema = new mongoose.Schema(
       fullName: String,
       phone: String,
       pincode: String,
-      city: String,
+      townCity: String,
       state: String,
-      houseNo: String,
-      area: String,
+      houseNumber: String,
+      street: String,
       landmark: String,
       _id: false, // (optional) to avoid auto _id creation
     },

@@ -161,10 +161,10 @@ export const verifyPayment = async (req, res) => {
     <ul>
       <li><strong>Name:</strong> ${order.address.fullName}</li>
       <li><strong>Phone:</strong> ${order.address.phone}</li>
-      <li><strong>Address:</strong> ${order.address.houseNo}, ${
-        order.address.area
+      <li><strong>Address:</strong> ${order.address.houseNumber}, ${
+        order.address.street
       }, ${order.address.landmark || ""}</li>
-      <li><strong>City:</strong> ${order.address.city}</li>
+      <li><strong>City:</strong> ${order.address.townCity}</li>
       <li><strong>State:</strong> ${order.address.state}</li>
       <li><strong>Pincode:</strong> ${order.address.pincode}</li>
     </ul>

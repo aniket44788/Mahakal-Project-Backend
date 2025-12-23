@@ -1,7 +1,9 @@
 // server.js
 
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
 import cors from "cors";
 import session from "express-session";
 import passport from "passport";
@@ -18,7 +20,6 @@ import DashboardProductRouter from "./routes/Dasboard Products Route/Dashboardpr
 
 import MandirRoute from "./routes/MandirRoute.js";
 
-dotenv.config();
 database();
 
 const app = express();
@@ -27,7 +28,8 @@ const PORT = process.env.PORT || 8999;
 // CORS for frontend
 app.use(
   cors({
-    origin: process.env.ORIGIN_URL,
+    // origin: process.env.ORIGIN_URL,
+    origin: "*",
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -35,32 +37,6 @@ app.use(
 );
 
 app.use(express.json());
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "secret",
-    resave: false,
-    saveUninitialized: true,
-    cookie: { httpOnly: true, secure: false, sameSite: "lax" },
-  })
-);
-
-// Passport (only if using redirect flow elsewhere)
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.BACKENDURL,
-    },
-    (accessToken, refreshToken, profile, done) => done(null, profile)
-  )
-);
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 // Mount auth routes
 app.use("/user", userRouter);
@@ -70,7 +46,7 @@ app.use("/api/payment", paymentRouter);
 // app.use("/oders", orderRouter);
 app.use("/cart", cartRouter);
 app.use("/dashboard/product", DashboardProductRouter);
-app.use("/mandir" , MandirRoute)
+app.use("/mandir", MandirRoute);
 
 app.get("/", (req, res) => res.send("Mahakal Backend Server is Live."));
 

@@ -96,7 +96,6 @@ export const getAllTempleProducts = async (req, res) => {
 };
 
 // ✅ Get single temple product by ID
-// ✅ Get single temple product by ID
 export const getTempleProductById = async (req, res) => {
   try {
     const { id } = req.params;

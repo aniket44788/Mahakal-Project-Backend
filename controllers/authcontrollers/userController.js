@@ -1,71 +1,143 @@
 import { OAuth2Client } from "google-auth-library";
 import User from "../../models/userSchema.js";
+import bcrypt from "bcrypt";
 import { generateOTP } from "../../utils/sendOTP.js";
 import generateToken from "../../utils/generateToken.js";
 import orderSchema from "../../models/orderSchema.js";
 import productSchema from "../../models/productSchema.js";
 import nodemailer from "nodemailer";
-
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
+import { sendEmail } from "../../utils/sendEmail.js";
+import jwt from "jsonwebtoken";
 // 3️⃣ Token-exchange Google login
-export const googleTokenLogin = async (req, res) => {
+export const sendOtp = async (req, res) => {
   try {
-    const { idToken } = req.body;
-    if (!idToken) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing idToken" });
-    }
-
-    // Verify with Google
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
+    const { email } = req.body;
 
     if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid Google account" });
-    }
-
-    // Find or create user
-    let user = await User.findOne({ $or: [{ email }, { googleId }] });
-    if (!user) {
-      user = await User.create({
-        name,
-        email,
-        googleId,
-        profileImage: picture,
-        isVerified: true,
-        authMethod: "google",
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
       });
-    } else if (!user.googleId) {
-      user.googleId = googleId;
-      user.profileImage = picture;
-      user.isVerified = true;
-      user.authMethod = "google";
-      await user.save();
     }
 
-    const token = generateToken(user);
-    return res.json({ success: true, token, user });
-  } catch (err) {
-    console.error("Google token verification error:", err);
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid Google token" });
+    const otp = generateOTP();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = new User({ email });
+    }
+
+    user.emailOtp = hashedOtp;
+    user.emailOtpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+    user.isVerified = false;
+
+    await user.save();
+
+    await sendEmail(
+      email,
+      "Your Login OTP",
+      `Your OTP is ${otp}. It is valid for 5 minutes.`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
+      otp,
+    });
+  } catch (error) {
+    console.error("SEND OTP ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required",
+      });
+    }
+
+    const user = await User.findOne({ email }).select("+emailOtp");
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found. Please request OTP again.",
+      });
+    }
+
+    if (!user.emailOtp || !user.emailOtpExpiry) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found. Please request again.",
+      });
+    }
+
+    if (user.emailOtpExpiry < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired",
+      });
+    }
+
+    const isOtpValid = await bcrypt.compare(otp, user.emailOtp);
+
+    if (!isOtpValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    // ✅ OTP verified
+    user.isVerified = true;
+    user.emailOtp = undefined;
+    user.emailOtpExpiry = undefined;
+    await user.save();
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+      },
+      process.env.JWT_SECRET_AUTH,
+      {
+        expiresIn: process.env.JWT_EXPIRE || "70d",
+      }
+    );
+
+    const cleanUser = await User.findById(user._id).select(
+      "-password -emailOtp -emailOtpExpiry -__v"
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "OTP verified successfully",
+      token,
+      user: cleanUser,
+    });
+  } catch (error) {
+    console.error("VERIFY OTP ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 export const userProfile = async (req, res) => {
   try {
-    // ✅ Get user ID from authenticated request or params
-    const userId = req.user?._id || req.params.id || req.query.id;
-    console.log(userId, "this is user id ");
+    const userId = req.user?.id || req.params.id || req.query.id;
+
     if (!userId) {
       return res.status(400).json({
         success: false,
@@ -73,12 +145,11 @@ export const userProfile = async (req, res) => {
       });
     }
 
-    // ✅ Fetch user (exclude sensitive fields)
     const user = await User.findById(userId)
-      .select("-password -__v")
+      .select("-password -emailOtp -emailOtpExpiry -__v")
       .populate({
         path: "favoriteProducts",
-        select: "title price image category", // only important fields
+        select: "title price image category",
       })
       .populate({
         path: "orders",
@@ -87,9 +158,6 @@ export const userProfile = async (req, res) => {
       .populate({
         path: "cart.product",
         select: "title price image",
-      })
-      .populate({
-        path: "addresses",
       });
 
     if (!user) {
@@ -99,33 +167,65 @@ export const userProfile = async (req, res) => {
       });
     }
 
-    // ✅ Clean response: add profile image safely
+    // ✅ Clean response (schema-based)
     const userData = {
       _id: user._id,
-      name: user.name,
+      name: user.name || null,
       email: user.email,
-      profileImage: user.profileImage || null, // show Google image
-      authMethod: user.authMethod,
+      profileImage: user.profileImage || null,
+      authMethod: user.authMethod, // "email"
       isVerified: user.isVerified,
+      addresses: user.addresses, // embedded schema
       favoriteProducts: user.favoriteProducts,
       orders: user.orders,
       cart: user.cart,
-      addresses: user.addresses,
       createdAt: user.createdAt,
     };
 
-    // ✅ Send clean response
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "User profile fetched successfully",
       user: userData,
     });
   } catch (error) {
-    console.error("Error fetching user profile:", error);
-    res.status(500).json({
+    console.error("USER PROFILE ERROR:", error);
+    return res.status(500).json({
       success: false,
-      message: "Server error fetching user profile",
-      error: error.message,
+      message: error.message,
+    });
+  }
+};
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const { name } = req.body;
+
+    const updateData = {};
+
+    if (name) updateData.name = name;
+
+    // ☁ Cloudinary image
+    if (req.file) {
+      updateData.profileImage = req.file.path;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    }).select("-password -emailOtp -emailOtpExpiry -__v");
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("UPDATE PROFILE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
@@ -245,6 +345,7 @@ export const updateAddress = async (req, res) => {
       .json({ success: false, message: "Server error", error: err.message });
   }
 };
+
 export const deleteAddress = async (req, res) => {
   console.log("Delete address controller hit");
 
