@@ -237,6 +237,25 @@ export const getorders = async (req, res) => {
   }
 };
 
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({});
+
+    return res.status(200).json({
+      success: true,
+      message: "All users fetched successfully",
+      totalUsers: users.length,
+      users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      error: error.message,
+    });
+  }
+};
+
 export const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -307,6 +326,34 @@ export const getOrderById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch order",
+    });
+  }
+};
+
+export const getOrdersByUserAdmin = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const orders = await Order.find({ user: userId });
+
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No orders found for this user",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      totalOrders: orders.length,
+      orders,
+    });
+  } catch (error) {
+    console.error("Admin Get Orders By User Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch user orders",
+      error: error.message,
     });
   }
 };

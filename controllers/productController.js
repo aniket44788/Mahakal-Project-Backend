@@ -32,7 +32,7 @@ export const createProduct = async (req, res) => {
 export const getProducts = async (req, res) => {
   try {
     const products = await Product.find().populate("category");
-    res.status(200).json({ success: true, products });
+    res.status(200).json({ success: true, count: products.length, products });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

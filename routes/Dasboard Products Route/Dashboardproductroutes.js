@@ -8,6 +8,7 @@ import {
 } from "../../controllers/Dashboard Products Controllers/DashboardProducts.js";
 import upload from "../../middleware/uploadMiddleware.js";
 const DashboardProductRouter = express.Router();
+
 DashboardProductRouter.post(
   "/post",
   upload.array("templeImages", 5),

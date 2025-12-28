@@ -1,4 +1,4 @@
-import Temple from "../../models/dashboardtempleschema.js"; // adjust the path if needed
+import Temple from "../../models/dashboardtempleschema.js"; 
 import cloudinary from "../../config/cloudinary.js";
 
 // ✅ CREATE TEMPLE PRODUCT (with image upload)
@@ -135,8 +135,8 @@ export const getTempleProductById = async (req, res) => {
 export const updateTempleProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { removeImages } = req.body; // array of public_ids user wants to remove
-
+    const { removeImages } = req.body; 
+    
     console.log("🟢 Incoming update request for:", id);
     console.log("🟢 Images to remove:", removeImages);
 
