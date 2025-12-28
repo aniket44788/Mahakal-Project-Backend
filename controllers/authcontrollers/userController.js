@@ -35,16 +35,28 @@ export const sendOtp = async (req, res) => {
 
     await user.save();
 
-    await sendEmail(
-      email,
-      "Your Login OTP",
-      `Your OTP is ${otp}. It is valid for 5 minutes.`
-    );
+    console.log("✅ User saved:", user.email); // <-- Debug log
+    console.log("📧 Sending email to:", email); // <-- Debug log
+
+    // 🔹 Change here: wrap sendEmail in try/catch
+    try {
+      await sendEmail(
+        email,
+        "Your Login OTP",
+        `Your OTP is ${otp}. It is valid for 5 minutes.`
+      );
+    } catch (emailError) {
+      console.error("EMAIL SEND ERROR:", emailError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP email",
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: "OTP sent successfully",
-      otp,
+      otp, // For testing, remove in production
     });
   } catch (error) {
     console.error("SEND OTP ERROR:", error);
