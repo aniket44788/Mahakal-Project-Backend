@@ -1,14 +1,8 @@
-// server.js
-
 import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
 import cors from "cors";
-import session from "express-session";
-import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-
 import database from "./config/database.js";
 import userRouter from "./routes/auth/authRoutes.js";
 import productRouter from "./routes/productRoute.js";
@@ -23,7 +17,8 @@ import MandirRoute from "./routes/MandirRoute.js";
 database();
 
 const app = express();
-const PORT = process.env.PORT || 8999;
+console.log("port" , process.env.PORT)
+const PORT = process.env.PORT ;
 
 // CORS for frontend
 app.use(

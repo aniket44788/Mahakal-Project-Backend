@@ -1,13 +1,10 @@
-import { OAuth2Client } from "google-auth-library";
+
 import User from "../../models/userSchema.js";
 import bcrypt from "bcrypt";
 import { generateOTP } from "../../utils/sendOTP.js";
-import generateToken from "../../utils/generateToken.js";
-import orderSchema from "../../models/orderSchema.js";
-import productSchema from "../../models/productSchema.js";
 import nodemailer from "nodemailer";
-import { sendEmail } from "../../utils/sendEmail.js";
 import jwt from "jsonwebtoken";
+import { sendEmail } from "../../utils/sendEmail.js";
 // 3️⃣ Token-exchange Google login
 export const sendOtp = async (req, res) => {
   try {

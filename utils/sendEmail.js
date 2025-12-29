@@ -1,61 +1,33 @@
-// import nodemailer from "nodemailer";
-
-// export const sendEmail = async (to, subject, html) => {
-//   const transporter = nodemailer.createTransport({
-//     service: "gmail",
-//     auth: {
-//       user: process.env.EMAIL_USER,
-//       pass: process.env.EMAIL_PASS
-//     }
-//   });
-
-//   await transporter.sendMail({
-//     from: `"Mahakal Bhakti Bazzar" <${process.env.EMAIL_USER}>`,
-//     to,
-//     subject,
-//     html
-//   });
-// };
+import dotenv from "dotenv";
+dotenv.config();
 
 import nodemailer from "nodemailer";
-import { google } from "googleapis";
 
-const OAuth2 = google.auth.OAuth2;
-
-const oauth2Client = new OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  "https://developers.google.com/oauthplayground"
-);
-
-oauth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+console.log("Email user", process.env.EMAIL_USER);
+console.log("Email pass", process.env.EMAIL_PASS);
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-export const sendEmail = async (to, subject, html) => {
+export const sendEmail = async (to, subject, text) => {
   try {
-    const accessToken = await oauth2Client.getAccessToken();
+    console.log("📧 Sending email to:", to);
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        type: "OAuth2",
-        user: process.env.EMAIL_USER,
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-        accessToken: accessToken.token,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Mahakal Bhakti Bazzar" <${process.env.EMAIL_USER}>`,
+    const info = await transporter.sendMail({
+      from: `"Mahakal App" <${process.env.EMAIL_USER}>`,
       to,
       subject,
-      html,
+      text,
     });
+
+    console.log("✅ Email sent:", info.messageId);
+    return true;
   } catch (error) {
-    console.error("Email error:", error);
+    console.error("❌ Email error:", error.message);
     throw error;
   }
 };
