@@ -2,32 +2,48 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import nodemailer from "nodemailer";
+import { google } from "googleapis";
 
-console.log("Email user", process.env.EMAIL_USER);
-console.log("Email pass", process.env.EMAIL_PASS);
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+console.log("Google client secret", process.env.GOOGLE_CLIENT_SECRET);
+console.log("Google client id", process.env.GOOGLE_CLIENT_ID);
+console.log("Google refresh token", process.env.GOOGLE_REFRESH_TOKEN);
+
+const OAuth2 = google.auth.OAuth2;
+
+const oauth2Client = new OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  "https://developers.google.com/oauthplayground"
+);
+
+oauth2Client.setCredentials({
+  refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
 });
 
-export const sendEmail = async (to, subject, text) => {
+export const sendEmail = async (to, subject, html) => {
   try {
-    console.log("📧 Sending email to:", to);
+    const accessToken = await oauth2Client.getAccessToken();
 
-    const info = await transporter.sendMail({
-      from: `"Mahakal App" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text,
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "OAuth2",
+        user: process.env.EMAIL_USER,
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+        accessToken: accessToken.token,
+      },
     });
 
-    console.log("✅ Email sent:", info.messageId);
-    return true;
+    await transporter.sendMail({
+      from: `"Mahakal Bhakti Bazzar" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
   } catch (error) {
-    console.error("❌ Email error:", error.message);
+    console.error("Email error:", error);
     throw error;
   }
 };
