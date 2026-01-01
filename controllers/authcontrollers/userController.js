@@ -1,4 +1,3 @@
-
 import User from "../../models/userSchema.js";
 import bcrypt from "bcrypt";
 import { generateOTP } from "../../utils/sendOTP.js";
@@ -6,6 +5,8 @@ import nodemailer from "nodemailer";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../utils/sendEmail.js";
 // 3️⃣ Token-exchange Google login
+
+
 export const sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -27,23 +28,26 @@ export const sendOtp = async (req, res) => {
     }
 
     user.emailOtp = hashedOtp;
-    user.emailOtpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+    user.emailOtpExpiry = Date.now() + 5 * 60 * 1000; // 5 min
     user.isVerified = false;
 
     await user.save();
 
-    console.log("✅ User saved:", user.email); // <-- Debug log
-    console.log("📧 Sending email to:", email); // <-- Debug log
+    console.log("✅ User saved:", user.email);
+    console.log("📧 Sending email to:", email);
 
-    // 🔹 Change here: wrap sendEmail in try/catch
     try {
       await sendEmail(
         email,
         "Your Login OTP",
-        `Your OTP is ${otp}. It is valid for 5 minutes.`
+        `
+        <h2>Your Login OTP</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP is valid for 5 minutes.</p>
+        `
       );
     } catch (emailError) {
-      console.error("EMAIL SEND ERROR:", emailError);
       return res.status(500).json({
         success: false,
         message: "Failed to send OTP email",
@@ -53,7 +57,7 @@ export const sendOtp = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "OTP sent successfully",
-      otp, // For testing, remove in production
+      otp, // ❌ REMOVE in production
     });
   } catch (error) {
     console.error("SEND OTP ERROR:", error);
