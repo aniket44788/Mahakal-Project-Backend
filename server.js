@@ -17,8 +17,8 @@ import MandirRoute from "./routes/MandirRoute.js";
 database();
 
 const app = express();
-console.log("port" , process.env.PORT)
-const PORT = process.env.PORT ;
+console.log("port", process.env.PORT);
+const PORT = process.env.PORT;
 
 // CORS for frontend
 app.use(
@@ -45,6 +45,6 @@ app.use("/mandir", MandirRoute);
 
 app.get("/", (req, res) => res.send("Mahakal Backend Server is Live."));
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🗿 Mahakal Server is host at port no ${PORT}....`);
 });
