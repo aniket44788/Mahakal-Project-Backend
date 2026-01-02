@@ -3,13 +3,14 @@ dotenv.config();
 
 import nodemailer from "nodemailer";
 
-console.log("EMAIL_USER:", process.env.EMAIL_USER ? "OK" : "MISSING");
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "OK" : "MISSING");
+console.log("Email user:", process.env.EMAIL_USER);
+
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  throw new Error("❌ EMAIL_USER or EMAIL_PASS missing");
+}
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
+  service: "gmail", 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -18,16 +19,17 @@ const transporter = nodemailer.createTransport({
 
 export const sendEmail = async (to, subject, html) => {
   try {
-    await transporter.sendMail({
+    const result = await transporter.sendMail({
       from: `"OTP Service" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
     });
 
-    console.log("✅ Email sent to:", to);
+    console.log("✅ Email sent successfully:", result.messageId);
+    return result;
   } catch (error) {
-    console.error("❌ Nodemailer Error:", error);
+    console.error("❌ Email send error:", error);
     throw error;
   }
 };

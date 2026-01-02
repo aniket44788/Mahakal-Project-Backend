@@ -5,6 +5,7 @@ import {
   getOrderById,
   getorders,
   getOrdersByUserAdmin,
+  getRecentOrders,
   updateOrderStatus,
   verifyPayment,
 } from "../controllers/paymentController.js";
@@ -27,5 +28,7 @@ paymentRouter.get(
   adminProtect,
   getOrdersByUserAdmin
 );
+
+paymentRouter.get("/getrecentorders" , adminProtect , getRecentOrders)
 
 export default paymentRouter;

@@ -6,7 +6,6 @@ import jwt from "jsonwebtoken";
 import { sendEmail } from "../../utils/sendEmail.js";
 // 3️⃣ Token-exchange Google login
 
-
 export const sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -28,42 +27,38 @@ export const sendOtp = async (req, res) => {
     }
 
     user.emailOtp = hashedOtp;
-    user.emailOtpExpiry = Date.now() + 5 * 60 * 1000; // 5 min
+    user.emailOtpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
     user.isVerified = false;
 
     await user.save();
 
     console.log("✅ User saved:", user.email);
-    console.log("📧 Sending email to:", email);
+    console.log("📧 Sending OTP email to:", email);
 
-    try {
-      await sendEmail(
-        email,
-        "Your Login OTP",
-        `
+    // Send OTP Email
+    await sendEmail(
+      email,
+      "Your Login OTP",
+      `
         <h2>Your Login OTP</h2>
         <p>Your OTP is:</p>
         <h1>${otp}</h1>
         <p>This OTP is valid for 5 minutes.</p>
-        `
-      );
-    } catch (emailError) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to send OTP email",
-      });
-    }
+      `
+    );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "OTP sent successfully",
-      otp, // ❌ REMOVE in production
+      // ❌ REMOVE otp in production
+      otp,
     });
   } catch (error) {
-    console.error("SEND OTP ERROR:", error);
-    res.status(500).json({
+    console.error("❌ SEND OTP ERROR:", error);
+
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Something went wrong while sending OTP",
     });
   }
 };

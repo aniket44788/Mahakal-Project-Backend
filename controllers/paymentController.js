@@ -3,6 +3,8 @@ import crypto from "crypto";
 import Order from "../models/orderSchema.js";
 import User from "../models/userSchema.js";
 import { sendEmail } from "../utils/sendEmail.js";
+
+
 export const createOrder = async (req, res) => {
   console.log("Create order hitting");
   const { amount, currency, products, addressId } = req.body;
@@ -354,6 +356,25 @@ export const getOrdersByUserAdmin = async (req, res) => {
       success: false,
       message: "Failed to fetch user orders",
       error: error.message,
+    });
+  }
+};
+
+export const getRecentOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate("user", "name email phone") // user data
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.status(200).json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
     });
   }
 };
