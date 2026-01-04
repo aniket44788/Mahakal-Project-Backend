@@ -38,13 +38,64 @@ export const sendOtp = async (req, res) => {
     // Send OTP Email
     await sendEmail(
       email,
-      "Your Login OTP",
+      "🔐 Your Login OTP – Mahakal Bazar",
       `
-        <h2>Your Login OTP</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP is valid for 5 minutes.</p>
-      `
+  <div style="max-width:520px;margin:auto;background:#ffffff;border-radius:12px;
+              box-shadow:0 10px 25px rgba(0,0,0,0.08);
+              font-family:Arial,Helvetica,sans-serif;overflow:hidden">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#f97316,#ef4444);
+                padding:20px;text-align:center;color:#ffffff">
+      <h2 style="margin:0;font-size:20px;">Mahakal Bazar</h2>
+      <p style="margin:4px 0 0;font-size:13px;opacity:0.9">
+        Secure Login Verification
+      </p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:24px;color:#333333">
+      <p style="font-size:14px;margin:0 0 12px">
+        Hello,
+      </p>
+
+      <p style="font-size:14px;margin:0 0 16px;line-height:1.6">
+        Use the following One Time Password (OTP) to complete your login.
+        This OTP is valid for <strong>5 minutes</strong>.
+      </p>
+
+      <!-- OTP Box -->
+      <div style="text-align:center;margin:24px 0">
+        <div style="display:inline-block;
+                    background:#fff7ed;
+                    color:#ea580c;
+                    font-size:32px;
+                    letter-spacing:6px;
+                    font-weight:700;
+                    padding:14px 28px;
+                    border-radius:10px;
+                    border:1px dashed #fdba74">
+          ${otp}
+        </div>
+      </div>
+
+      <p style="font-size:13px;color:#555555;margin:0 0 10px">
+        ⚠️ Do not share this OTP with anyone for security reasons.
+      </p>
+
+      <p style="font-size:13px;color:#555555;margin:0">
+        If you did not request this login, please ignore this email.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f9fafb;padding:14px;text-align:center;
+                font-size:12px;color:#777777">
+      © ${new Date().getFullYear()} Mahakal Bazar. All rights reserved.
+    </div>
+
+  </div>
+  `
     );
 
     return res.status(200).json({
