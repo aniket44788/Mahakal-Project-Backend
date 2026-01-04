@@ -13,6 +13,7 @@ import cartRouter from "./routes/cartRoute.js";
 import DashboardProductRouter from "./routes/Dasboard Products Route/Dashboardproductroutes.js";
 
 import MandirRoute from "./routes/MandirRoute.js";
+import reviewroute from "./routes/reviewroute/reviewroute.js";
 
 database();
 
@@ -42,6 +43,9 @@ app.use("/api/payment", paymentRouter);
 app.use("/cart", cartRouter);
 app.use("/dashboard/product", DashboardProductRouter);
 app.use("/mandir", MandirRoute);
+
+//reviews
+app.use("/review" , reviewroute )
 
 app.get("/", (req, res) => res.send("Mahakal Backend Server is Live."));
 
