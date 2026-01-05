@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createOrder,
+  downloadInvoiceAdmin,
   getAllUsers,
   getOrderById,
   getorders,
@@ -14,7 +15,9 @@ import { adminProtect } from "../middleware/adminauth.js";
 
 const paymentRouter = express.Router();
 paymentRouter.post("/create-order", protect, createOrder);
+
 paymentRouter.post("/verify-payment", protect, verifyPayment);
+
 paymentRouter.get("/myorders", protect, getorders);
 
 paymentRouter.get("/getAllUsers", adminProtect, getAllUsers);
@@ -29,6 +32,12 @@ paymentRouter.get(
   getOrdersByUserAdmin
 );
 
-paymentRouter.get("/getrecentorders" , adminProtect , getRecentOrders)
+paymentRouter.get("/getrecentorders", adminProtect, getRecentOrders);
+
+paymentRouter.get(
+  "/admin/order/:orderId/invoice",
+  adminProtect,
+  downloadInvoiceAdmin
+);
 
 export default paymentRouter;

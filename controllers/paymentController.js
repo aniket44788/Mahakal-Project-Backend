@@ -3,7 +3,10 @@ import crypto from "crypto";
 import Order from "../models/orderSchema.js";
 import User from "../models/userSchema.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import path from "path";
+import fs from "fs";
 
+import { generateInvoicePDF } from "../utils/generateInvoice.js";
 
 export const createOrder = async (req, res) => {
   console.log("Create order hitting");
@@ -83,7 +86,6 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// ✅ Verify Payment Controller
 export const verifyPayment = async (req, res) => {
   const { razorpayOrderId, razorpayPaymentId, signature } = req.body;
 
@@ -125,6 +127,10 @@ export const verifyPayment = async (req, res) => {
     order.paymentStatus = "paid";
     order.razorpayPaymentId = razorpayPaymentId;
     order.razorpaySignature = signature;
+
+    const invoicePath = generateInvoicePDF(order);
+    order.invoicePath = invoicePath;
+
     await order.save();
 
     console.log("Order saved successfully:", order._id);
@@ -336,7 +342,7 @@ export const getOrdersByUserAdmin = async (req, res) => {
   try {
     const userId = req.params.userId;
 
-    const orders = await Order.find({ user: userId });
+    const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
 
     if (!orders || orders.length === 0) {
       return res.status(404).json({
@@ -345,10 +351,18 @@ export const getOrdersByUserAdmin = async (req, res) => {
       });
     }
 
+    // 🔥 Attach invoice download URL
+    const formattedOrders = orders.map((order) => ({
+      ...order.toObject(),
+      invoiceDownloadUrl: order.invoicePath
+        ? `/admin/orders/${order._id}/invoice`
+        : null,
+    }));
+
     res.status(200).json({
       success: true,
-      totalOrders: orders.length,
-      orders,
+      totalOrders: formattedOrders.length,
+      orders: formattedOrders,
     });
   } catch (error) {
     console.error("Admin Get Orders By User Error:", error);
@@ -375,6 +389,48 @@ export const getRecentOrders = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch orders",
+    });
+  }
+};
+
+export const downloadInvoiceAdmin = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    // 1️⃣ Order fetch
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+    }
+
+    if (!order.invoicePath) {
+      return res.status(404).json({
+        success: false,
+        message: "Invoice not generated for this order",
+      });
+    }
+
+    // 2️⃣ Absolute file path
+    const invoiceFullPath = path.join(process.cwd(), order.invoicePath);
+
+    // 3️⃣ File exists check
+    if (!fs.existsSync(invoiceFullPath)) {
+      return res.status(404).json({
+        success: false,
+        message: "Invoice file not found on server",
+      });
+    }
+
+    // 4️⃣ Send file
+    res.download(invoiceFullPath, path.basename(invoiceFullPath));
+  } catch (error) {
+    console.error("Invoice download error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to download invoice",
     });
   }
 };
