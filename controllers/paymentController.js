@@ -9,83 +9,59 @@ import fs from "fs";
 import { generateInvoicePDF } from "../utils/generateInvoice.js";
 
 export const createOrder = async (req, res) => {
-  console.log("Create order hitting");
   const { amount, currency, products, addressId } = req.body;
 
   try {
-    // 🛑 Validate products
     if (!products || products.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Products are required to create order",
+        message: "Products are required",
       });
     }
-    // ⭐ INSERT ADDRESS CHECK HERE ⭐
+
     const user = await User.findById(req.user.id);
-    console.log("user found", user);
-
-    if (!user.addresses || user.addresses.length === 0) {
+    if (!user || !user.addresses.length) {
       return res.status(400).json({
         success: false,
-        message: "No address found. Please add an address before ordering.",
+        message: "No address found",
       });
     }
 
-    const selectedAddressId = addressId;
-    console.log(selectedAddressId, "Address selected successfully");
-    if (!selectedAddressId) {
-      return res.status(400).json({
-        success: false,
-        message: "Please select an address",
-        addresses: user.addresses,
-      });
-    }
-
-    const selectedAddress = user.addresses.id(selectedAddressId);
-
+    const selectedAddress = user.addresses.id(addressId);
     if (!selectedAddress) {
       return res.status(404).json({
         success: false,
-        message: "Selected address not found",
+        message: "Address not found",
       });
     }
 
-    // 1️⃣ Create order on Razorpay
-    const options = {
+    // ✅ CREATE RAZORPAY ORDER (IMPORTANT)
+    const razorpayOrder = await razorpay.orders.create({
       amount: amount * 100,
-      currency: currency || "INR",
-      receipt: "receipt_" + Date.now(),
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`,
       payment_capture: 1,
-    };
-    console.log(options, "options");
-    const razorpayOrder = await razorpay.orders.create(options);
-    // Generate UPI payment QR URL using merchant VPA
-    const upiQR = `upi://pay?pa=${process.env.RAZORPAY_UPI}&pn=MahakalBazar&am=${amount}&cu=INR&tn=Order${razorpayOrder.id}`;
+    });
 
-    // 2️⃣ Save order in MongoDB
+    // ✅ SAVE ORDER IN DB
     const newOrder = await Order.create({
       user: req.user.id,
-      products: products, // frontend must send this
-      amount: amount,
-      currency: currency || "INR",
+      products,
+      amount,
+      currency: "INR",
       razorpayOrderId: razorpayOrder.id,
       paymentStatus: "pending",
       deliveryStatus: "pending",
-      address: selectedAddress, // ⭐ ADD THIS
+      address: selectedAddress,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Order created successfully",
-      razorpayOrder: razorpayOrder, // Full Razorpay order object
-      orderInDB: newOrder, // Full MongoDB order object
-      orderIdInDB: newOrder._id, // Only ID (optional)
-      address: selectedAddress, // ⭐ ADD THIS
-      upiQR: upiQR, // ✅ Add this
-      // vpa: process.env.RAZORPAY_UPI, 
+      razorpayOrder,
+      orderIdInDB: newOrder._id,
     });
   } catch (error) {
-    console.error("Order create error:", error);
+    console.error("Create order error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
