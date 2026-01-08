@@ -59,6 +59,8 @@ export const createOrder = async (req, res) => {
     };
     console.log(options, "options");
     const razorpayOrder = await razorpay.orders.create(options);
+    // Generate UPI payment QR URL using merchant VPA
+    const upiQR = `upi://pay?pa=${process.env.RAZORPAY_UPI}&pn=MahakalBazar&am=${amount}&cu=INR&tn=Order${razorpayOrder.id}`;
 
     // 2️⃣ Save order in MongoDB
     const newOrder = await Order.create({
@@ -79,6 +81,8 @@ export const createOrder = async (req, res) => {
       orderInDB: newOrder, // Full MongoDB order object
       orderIdInDB: newOrder._id, // Only ID (optional)
       address: selectedAddress, // ⭐ ADD THIS
+      upiQR: upiQR, // ✅ Add this
+      // vpa: process.env.RAZORPAY_UPI, 
     });
   } catch (error) {
     console.error("Order create error:", error);
