@@ -3,8 +3,6 @@ dotenv.config();
 
 import nodemailer from "nodemailer";
 
-console.log("Email user:", process.env.EMAIL_USER);
-console.log("Email user:", process.env.EMAIL_PASS);
 
 
 const transporter = nodemailer.createTransport({
@@ -16,9 +14,11 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendEmail = async (to, subject, html) => {
+  console.log("function is hitting ")
   try {
+    const emailuser = "darkpanda44788@gmail.com";
     const result = await transporter.sendMail({
-      from: `"OTP Service" <${process.env.EMAIL_USER}>`,
+      from: `"OTP Service" <${emailuser}>`,
       to,
       subject,
       html,
