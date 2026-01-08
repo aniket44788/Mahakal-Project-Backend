@@ -6,11 +6,12 @@ import nodemailer from "nodemailer";
 console.log("Email user:", process.env.EMAIL_USER);
 
 if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-  throw new Error("❌ EMAIL_USER or EMAIL_PASS missing");
+  console.warn("⚠️ Email disabled: EMAIL_USER or EMAIL_PASS missing");
+  return; 
 }
 
 const transporter = nodemailer.createTransport({
-  service: "gmail", 
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
