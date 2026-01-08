@@ -4,11 +4,8 @@ dotenv.config();
 import nodemailer from "nodemailer";
 
 console.log("Email user:", process.env.EMAIL_USER);
+console.log("Email user:", process.env.EMAIL_PASS);
 
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-  console.warn("⚠️ Email disabled: EMAIL_USER or EMAIL_PASS missing");
-  return; 
-}
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
