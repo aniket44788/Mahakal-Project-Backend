@@ -8,6 +8,10 @@ import { sendEmail } from "../../utils/sendEmail.js";
 
 export const sendOtp = async (req, res) => {
   try {
+    // 👇 ADD THESE TWO LINES
+    const DUMMY_EMAIL = "dummy@mahakalbazar.com";
+    const DUMMY_OTP = "111111";
+
     const { email } = req.body;
 
     if (!email) {
@@ -17,7 +21,14 @@ export const sendOtp = async (req, res) => {
       });
     }
 
-    const otp = generateOTP();
+    let otp;
+    if (email === DUMMY_EMAIL) {
+      otp = DUMMY_OTP;
+      console.log("🧪 Dummy user detected");
+    } else {
+      otp = generateOTP();
+    }
+
     const hashedOtp = await bcrypt.hash(otp, 10);
 
     let user = await User.findOne({ email });
@@ -35,11 +46,11 @@ export const sendOtp = async (req, res) => {
     console.log("✅ User saved:", user.email);
     console.log("📧 Sending OTP email to:", email);
 
-    // Send OTP Email
-    await sendEmail(
-      email,
-      "🔐 Your Login OTP – Mahakal Bazar",
-      `
+    if (email !== DUMMY_EMAIL) {
+      await sendEmail(
+        email,
+        "🔐 Your Login OTP – Mahakal Bazar",
+        `
   <div style="max-width:520px;margin:auto;background:#ffffff;border-radius:12px;
               box-shadow:0 10px 25px rgba(0,0,0,0.08);
               font-family:Arial,Helvetica,sans-serif;overflow:hidden">
@@ -96,13 +107,14 @@ export const sendOtp = async (req, res) => {
 
   </div>
   `
-    );
+      );
+    }
 
     return res.status(200).json({
       success: true,
       message: "OTP sent successfully",
       // ❌ REMOVE otp in production
-      otp,
+      otp: email === DUMMY_EMAIL ? otp : undefined,
     });
   } catch (error) {
     console.error("❌ SEND OTP ERROR:", error);
